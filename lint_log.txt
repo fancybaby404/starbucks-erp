@@ -1,0 +1,69 @@
+
+> tin@0.1.0 lint
+> eslint
+
+
+E:\devE\customer-helpdesk\inspect_schema.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+E:\devE\customer-helpdesk\inspect_supabase.js
+  1:12  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:14  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  8:10  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\app\chat\page.tsx
+  4:27  warning  'MoreVertical' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\app\error.tsx
+  19:45  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+E:\devE\customer-helpdesk\src\app\page.tsx
+  74:108  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\devE\customer-helpdesk\src\app\self-service\page.tsx
+  4:10  warning  'Plus' is defined but never used        @typescript-eslint/no-unused-vars
+  4:34  warning  'ThumbsDown' is defined but never used  @typescript-eslint/no-unused-vars
+  4:52  warning  'Loader' is defined but never used      @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\app\sla\page.tsx
+   6:10  warning  'Rule' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  29:6   warning  React Hook useEffect has a missing dependency: 'setTickets'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  70:6   warning  React Hook useEffect has a missing dependency: 'setTickets'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\devE\customer-helpdesk\src\app\tickets\page.tsx
+  4:18  warning  'TicketStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\components\TicketCard.tsx
+   3:10   warning  'TicketNotes' is defined but never used              @typescript-eslint/no-unused-vars
+  12:7    warning  'STATUS_OPTIONS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  14:110  warning  'onAddNote' is defined but never used                @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\components\TicketDetailModal.tsx
+  4:19  warning  'Clock' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\components\TicketNotes.tsx
+  3:16  warning  'uuidv4' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\lib\data.ts
+    2:49  warning  'DbCustomer' is defined but never used    @typescript-eslint/no-unused-vars
+    2:61  warning  'DbCaseNote' is defined but never used    @typescript-eslint/no-unused-vars
+    2:73  warning  'DbSlaRule' is defined but never used     @typescript-eslint/no-unused-vars
+   29:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   34:28  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   35:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:43  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:20  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:28  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:30  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   79:34  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:35  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:31  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  261:30  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:49  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\devE\customer-helpdesk\src\lib\types.ts
+  105:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Ô£û 36 problems (19 errors, 17 warnings)
+

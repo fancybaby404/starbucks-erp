@@ -1,0 +1,72 @@
+
+=== Table: _users ===
+  - id: string (uuid)
+  - created_at: string (timestamp with time zone)
+  - first_name: string (character varying)
+  - last_name: string (character varying)
+  - middle_name: string (character varying)
+  - role: string (character varying)
+  - email: string (character varying)
+  - password: string (character varying)
+  - provider: string (text)
+  - external_id: string (character varying)
+
+=== Table: employee_hr ===
+  - id: string (uuid)
+  - created_at: string (timestamp with time zone)
+  - employee_id: string (uuid)
+  - first_name: string (character varying)
+  - last_name: string (character varying)
+  - job_title: string (character varying)
+  - department_id: string (uuid)
+  - contact_info: string (character varying)
+  - employee_type: string (character varying)
+  - hire_date: string (character varying)
+  - status: string (character varying)
+
+=== Table: select_employees ===
+  - email: string (character varying)
+  - last_name: string (character varying)
+  - position: string (character varying)
+  - salary: number (real)
+
+=== Table: tasks ===
+  - id: string (uuid)
+  - start_date: string (timestamp with time zone)
+  - expected_date: string (timestamp with time zone)
+  - end_date: string (timestamp with time zone)
+  - project_id: string (uuid)
+  - description: string (text)
+  - employee_id: string (uuid)
+  - status: string (character varying)
+
+=== Table: employees ===
+  - id: string (uuid)
+  - created_at: string (timestamp with time zone)
+  - user_id: string (uuid)
+  - position: string (character varying)
+  - salary: number (real)
+  - contact: string (character varying)
+  - branch_id: string (uuid)
+  - is_deleted: boolean (boolean)
+
+=== Table: customer ===
+  - id: string (uuid)
+  - created_at: string (timestamp with time zone)
+  - customer_id: string (uuid)
+  - name: string (character varying)
+  - contact_info: string (character varying)
+  - preferences: string (character varying)
+  - purchase_history: string (character varying)
+
+=== Table: supportCase ===
+  - id: string (uuid)
+  - created_at: string (timestamp with time zone)
+  - case_id: string (uuid)
+  - customer_id: string (uuid)
+  - salesOrder_id: string (uuid)
+  - case_description: string (text)
+  - assigned_team: string (character varying)
+  - status: string (character varying)
+  - resolution_date: string (timestamp with time zone)
+  - satisfaction_rating: string (character varying)

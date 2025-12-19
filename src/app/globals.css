@@ -1,13 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f8f6; /* Starbucks cream */
-  --foreground: #1e3932; /* Starbucks dark */
+  --background: #f9f9f9; /* Softer, warmer white */
+  --foreground: #1e3932; /* Starbucks Dark Green */
+  
+  /* Starbucks Brand Colors */
   --sb-green: #00704a;
   --sb-dark: #1e3932;
-  --sb-light: #d4e9e2;
-  --sb-cream: #f1f8f6;
-  --sb-brown: #8b5e3c;
+  --sb-light: #d4e9e2; /* Minty Green */
+  --sb-cream: #f2f0eb; /* Warm Cream */
+  --sb-accent: #cba258; /* Gold/Bronze Accent */
+  
+  /* UI Tokens */
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(30, 57, 50, 0.08); /* Subtle dark border */
+  --sidebar-width: 260px;
 }
 
 @theme inline {
@@ -15,37 +22,48 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
   --color-sb-green: var(--sb-green);
   --color-sb-dark: var(--sb-dark);
   --color-sb-light: var(--sb-light);
   --color-sb-cream: var(--sb-cream);
-  --color-sb-brown: var(--sb-brown);
+  --color-sb-accent: var(--sb-accent);
+  
+  --shadow-premium: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 0 3px rgba(0,0,0,0.02);
+  --shadow-premium-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 0 5px rgba(0,0,0,0.02);
 }
-
-/* Lock the theme to Starbucks palette (ignore OS dark mode) */
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(212, 233, 226, 0.4) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(242, 240, 235, 0.6) 0px, transparent 50%);
+  background-attachment: fixed;
 }
 
+/* Premium Component Classes */
 .sb-btn {
-  @apply inline-flex items-center justify-center px-4 py-2 rounded-md bg-[var(--sb-green)] text-white hover:brightness-110 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--sb-green)];
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[var(--sb-green)] text-white font-medium transition-all duration-200 shadow-sm hover:shadow-[var(--shadow-premium-hover)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--sb-green)];
 }
 
 .sb-card {
-  @apply bg-white/90 backdrop-blur-sm shadow-sm border border-[color-mix(in_hsl,currentColor_12%,transparent)] rounded-xl;
+  @apply bg-[var(--card-bg)] backdrop-blur-md shadow-[var(--shadow-premium)] border border-[var(--card-border)] rounded-2xl transition-all duration-300;
+}
+
+.sb-card:hover {
+  @apply shadow-[var(--shadow-premium-hover)] border-[color-mix(in_hsl,var(--sb-green),transparent_80%)];
 }
 
 .sb-input {
-  @apply border rounded-md px-3 py-2 w-full bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-[var(--sb-light)] focus:border-[var(--sb-green)];
+  @apply border border-gray-200 rounded-lg px-4 py-2.5 w-full bg-white/50 backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-[var(--sb-light)] focus:border-[var(--sb-green)] focus:bg-white;
 }
 
 .sb-badge {
-  @apply text-xs px-2 py-0.5 rounded-full bg-[var(--sb-light)] text-[var(--sb-dark)] border border-[color-mix(in_hsl,currentColor_12%,transparent)];
+  @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--sb-light)] text-[var(--sb-dark)] border border-[color-mix(in_hsl,var(--sb-dark),transparent_90%)];
 }
 
 .sb-section {
-  @apply flex items-center justify-between mb-2;
+  @apply flex items-center justify-between mb-6 border-b border-gray-100 pb-2;
 }

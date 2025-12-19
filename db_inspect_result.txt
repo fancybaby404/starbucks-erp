@@ -1,0 +1,122 @@
+Inspecting Supabase Spec at: https://xldpapongngkntfdevuv.supabase.co
+Found 40 tables: product, salesPerformace, payroll, _users, employee_hr, report, report_datasource, select_employees, department_hr, tasks, purchase_order, applicant_hr, employees, invoice, warehouse, inventory_transaction, payslip_hr, report_accesslog, sales_order, inventory_item, leave_request_hr, attendance_hr, payroll_hr, projects, recruitment, salesReport, resource_allocation, report_export, customer, supplier_item, branch, inventory, purchase_order_item, SalesOrderItem, attendance, supplier, supportCase, compliance_report, quotation, certifications_hr
+
+--- Table: product ---
+(Empty)
+
+--- Table: salesPerformace ---
+(Empty)
+
+--- Table: payroll ---
+(Empty)
+
+--- Table: _users ---
+(Empty)
+
+--- Table: employee_hr ---
+(Empty)
+
+--- Table: report ---
+(Empty)
+
+--- Table: report_datasource ---
+(Empty)
+
+--- Table: select_employees ---
+(Empty)
+
+--- Table: department_hr ---
+(Empty)
+
+--- Table: tasks ---
+(Empty)
+
+--- Table: purchase_order ---
+(Empty)
+
+--- Table: applicant_hr ---
+(Empty)
+
+--- Table: employees ---
+(Empty)
+
+--- Table: invoice ---
+(Empty)
+
+--- Table: warehouse ---
+(Empty)
+
+--- Table: inventory_transaction ---
+(Empty)
+
+--- Table: payslip_hr ---
+(Empty)
+
+--- Table: report_accesslog ---
+(Empty)
+
+--- Table: sales_order ---
+(Empty)
+
+--- Table: inventory_item ---
+(Empty)
+
+--- Table: leave_request_hr ---
+(Empty)
+
+--- Table: attendance_hr ---
+(Empty)
+
+--- Table: payroll_hr ---
+(Empty)
+
+--- Table: projects ---
+(Empty)
+
+--- Table: recruitment ---
+(Empty)
+
+--- Table: salesReport ---
+(Empty)
+
+--- Table: resource_allocation ---
+(Empty)
+
+--- Table: report_export ---
+(Empty)
+
+--- Table: customer ---
+(Empty)
+
+--- Table: supplier_item ---
+(Empty)
+
+--- Table: branch ---
+(Empty)
+
+--- Table: inventory ---
+(Empty)
+
+--- Table: purchase_order_item ---
+(Empty)
+
+--- Table: SalesOrderItem ---
+(Empty)
+
+--- Table: attendance ---
+(Empty)
+
+--- Table: supplier ---
+(Empty)
+
+--- Table: supportCase ---
+(Empty)
+
+--- Table: compliance_report ---
+(Empty)
+
+--- Table: quotation ---
+(Empty)
+
+--- Table: certifications_hr ---
+(Empty)

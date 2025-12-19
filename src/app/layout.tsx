@@ -1,35 +1,38 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+"use client";
+import React from 'react';
+import Sidebar from '@/components/Sidebar';
+import { ToastProvider } from '@/components/ToastProvider';
+import { AuthProvider } from '@/components/AuthProvider';
+import { usePathname } from 'next/navigation';
 import "./globals.css";
-import Header from "@/components/Header";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Starbucks Helpdesk",
-  description: "Customer Service & Helpdesk Module",
-};
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
+  const pathname = usePathname();
+  // Hide sidebar on public/customer pages
+  // Hide sidebar on public/customer pages
+  const hideSidebar = pathname === '/login' || pathname === '/support' || pathname === '/' || pathname === '/self-service' || !pathname.startsWith('/customerservice');
+
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-dvh bg-[var(--sb-cream)]`}> 
-        <Header />
-        <main className="mx-auto max-w-6xl px-4 py-6">
-          {children}
-        </main>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-[var(--sb-bg)] text-[var(--sb-dark)] font-sans antialiased">
+        <div className="flex min-h-screen">
+          {!hideSidebar && <Sidebar />}
+          
+          {/* Main Content Area */}
+          <div className={`flex-1 flex flex-col transition-all duration-300 ${!hideSidebar ? 'ml-64' : 'ml-0'}`}>
+            <main className={`flex-1 overflow-y-auto h-screen ${pathname === '/support' ? 'p-0' : 'p-8'}`}>
+              <ToastProvider> 
+                <AuthProvider>
+                   {children}
+                </AuthProvider>
+              </ToastProvider>
+            </main>
+          </div>
+        </div>
       </body>
     </html>
   );

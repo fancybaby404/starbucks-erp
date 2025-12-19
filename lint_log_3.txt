@@ -1,0 +1,37 @@
+
+> tin@0.1.0 lint
+> eslint
+
+
+E:\devE\customer-helpdesk\src\app\sla\page.tsx
+   6:10  warning  'Rule' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  29:6   warning  React Hook useEffect has a missing dependency: 'setTickets'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  70:6   warning  React Hook useEffect has a missing dependency: 'setTickets'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\devE\customer-helpdesk\src\app\support\page.tsx
+    6:8   warning  'Image' is defined but never used                                @typescript-eslint/no-unused-vars
+  105:19  error    Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  133:65  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+E:\devE\customer-helpdesk\src\components\Sidebar.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+
+E:\devE\customer-helpdesk\src\components\TicketCard.tsx
+   3:10   warning  'TicketNotes' is defined but never used              @typescript-eslint/no-unused-vars
+  12:7    warning  'STATUS_OPTIONS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  14:110  warning  'onAddNote' is defined but never used                @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\components\TicketDetailModal.tsx
+  4:19  warning  'Clock' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\components\TicketNotes.tsx
+  3:16  warning  'uuidv4' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\devE\customer-helpdesk\src\lib\data.ts
+  3:49  warning  'DbCustomer' is defined but never used  @typescript-eslint/no-unused-vars
+  3:61  warning  'DbCaseNote' is defined but never used  @typescript-eslint/no-unused-vars
+  3:73  warning  'DbSlaRule' is defined but never used   @typescript-eslint/no-unused-vars
+
+Ô£û 15 problems (2 errors, 13 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
