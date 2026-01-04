@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, Ticket, MessageSquare, BookOpen, Settings, LogOut } from "lucide-react";
+import { Home, Ticket, MessageSquare, BookOpen, Settings, LogOut, Users } from "lucide-react";
 import { auth } from "@/lib/auth";
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Live Chat", href: "/customerservice/chat", icon: MessageSquare }, // Agent view
   { label: "Self-Service", href: "/customerservice/self-service", icon: BookOpen },
   { label: "SLA Rules", href: "/customerservice/sla", icon: Settings },
+  { label: "Team", href: "/customerservice/team", icon: Users },
 ];
 
 export default function Sidebar() {
