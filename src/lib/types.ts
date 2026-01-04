@@ -31,26 +31,40 @@ export interface Rule {
   name: string;
   responseMins: number;
   resolutionMins: number;
+  conditionField?: string;
+  conditionValue?: string;
 }
 
 // Database Types (SnakeCase) - Mapped to Supabase tables
 export interface DbSupportCase {
   id: string;
   created_at: string;
-  case_description?: string;
+  case_number: string;
   title: string;
+  description: string;
   priority: string;
   status: string;
+  category: string;
   customer_id: string;
-  assignee?: string;
+  assigned_to?: string;
+  resolution_time?: number;
+  sla_deadline?: string;
 }
 
 export interface DbCustomer {
   id: string;
   created_at: string;
-  name: string;
-  contact_info?: string;
-  email?: string;
+  user_id?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  // Joins
+  users?: {
+      first_name: string;
+      last_name: string;
+      email: string;
+  };
 }
 
 export interface DbCaseNote {
@@ -59,13 +73,14 @@ export interface DbCaseNote {
   text: string;
   at: string;
   internal: boolean;
+  author_id?: string;
 }
 
 export interface DbSlaRule {
-  id: string;
-  name: string;
-  response_mins: number;
-  resolution_mins: number;
+  sla_id: string;
+  priority_level: string;
+  response_time: string;
+  resolution_time: string;
 }
 
 // Extended DB Types

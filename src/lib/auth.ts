@@ -6,6 +6,7 @@ export interface UserSession {
   id: string;
   email: string;
   role: 'CUSTOMER' | 'EMPLOYEE';
+  full_name: string;
 }
 
 const STORAGE_KEY = "sb_session";
@@ -15,21 +16,22 @@ export const auth = {
     if (!supabase) return { user: null, error: "System offline" };
 
     try {
-      const { data, error } = await supabase
-        .from('_users')
-        .select('*')
-        .eq('email', email)
-        .eq('password', password) // Warning: Plaintext check for demo only.
-        .single();
+      // Use RPC for secure server-side hash verification
+      const { data, error } = await supabase.rpc('login_user', { 
+        email_input: email, 
+        password_input: password 
+      });
 
       if (error || !data) {
         return { user: null, error: "Invalid email or password" };
       }
 
+      // Map RPC response to session
       const user: UserSession = {
         id: data.id,
         email: data.email,
-        role: data.role as 'CUSTOMER' | 'EMPLOYEE'
+        role: data.role as 'CUSTOMER' | 'EMPLOYEE',
+        full_name: data.full_name
       };
 
       // Persist session

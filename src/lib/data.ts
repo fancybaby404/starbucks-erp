@@ -16,10 +16,12 @@ export function useTickets() {
     const client = supabase;
     if (!client) return;
     
-    // Fetch cases with notes
+    // Fetch cases (support_cases)
+    // We join customers -> _users to get customer name if possible, 
+    // but for now let's just fetch the cases.
     const { data: cases, error } = await client
-      .from('supportCase')
-      .select(`*, case_notes(*)`)
+      .from('support_cases')
+      .select(`*`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -30,16 +32,15 @@ export function useTickets() {
     // Map DB to App types
     const mapped: Ticket[] = (cases || []).map((c: any) => ({
       id: c.id,
-      title: c.title || c.case_description || 'Untitled',
+      title: c.title,
+      // Use description as subtitle or just text? 
+      // The UI 'title' is often the subject.
       customerId: c.customer_id,
-      assignee: c.assignee,
+      assignee: c.assigned_to,
       status: (c.status as any) || "Open",
       priority: (c.priority as any) || "Medium",
       createdAt: c.created_at,
-      notes: (c.case_notes || []).map((n: any) => ({
-        id: n.id,
-        text: n.text,
-      })).sort((a: any, b: any) => new Date(b.at).getTime() - new Date(a.at).getTime())
+      notes: [] // Notes separately or not supported yet in this schema
     }));
     
     setTickets(mapped);
@@ -55,13 +56,14 @@ export function useTickets() {
     if (!client) return null; // Should handle error better
     
     const { data, error } = await client
-      .from('supportCase')
+      .from('support_cases')
       .insert({
         title: ticket.title,
         customer_id: ticket.customerId,
         priority: ticket.priority,
-        status: 'Open',
-        case_id: uuidv4(), // Schema requires case_id? UUID.
+        status: 'open', // Lowercase per schema check
+        case_number: `CASE-${Date.now()}`, // Temporary gen
+        description: ticket.title, // Default desc
         created_at: new Date().toISOString()
       })
       .select()
@@ -92,10 +94,10 @@ export function useTickets() {
     
     const updates: Partial<DbSupportCase> = {};
     if (changes.status) updates.status = changes.status;
-    if (changes.assignee) updates.assignee = changes.assignee;
+    if (changes.assignee) updates.assigned_to = changes.assignee;
     // ... map other fields if needed
 
-    const { error } = await client.from('supportCase').update(updates).eq('id', id);
+    const { error } = await client.from('support_cases').update(updates).eq('id', id);
     
     if (!error) {
       setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...changes } : t)));
@@ -142,13 +144,30 @@ export function useCustomers() {
     const client = supabase;
     if (!client) return;
     const load = async () => {
-       const { data } = await client.from('customer').select('*');
+       // Join customers with _users
+       const { data, error } = await client
+         .from('customers')
+         .select(`
+            id,
+            user_id,
+            _users (
+              first_name,
+              last_name,
+              email
+            )
+         `);
+         
        if (data) {
-        setCustomers(data.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          email: c.email || c.contact_info || '',
-        })));
+        setCustomers(data.map((c: any) => {
+          const u = c._users; // Joined data
+          const name = u ? `${u.first_name} ${u.last_name}`.trim() : 'Unknown';
+          const email = u?.email || '';
+          return {
+            id: c.id,
+            name,
+            email,
+          };
+        }));
        }
     };
     load();
@@ -159,13 +178,25 @@ export function useCustomers() {
     const client = supabase;
     if (!client) throw new Error("Supabase not initialized");
 
+    // For adding a customer, we now need to create a User first? 
+    // Or just fail if not exists?
+    // For this demo, let's just insert into customers and assume user creation is separate
+    // OR we can create a dummy user. 
+    // Let's just Insert into _users then customers?
+    const { data: userData, error: userError } = await client.from('_users').insert({
+        email,
+        password: 'password', // Default
+        first_name: name.split(' ')[0],
+        last_name: name.split(' ').slice(1).join(' ') || 'User',
+        role: 'CUSTOMER'
+    }).select().single();
+
+    if (userError) throw userError;
+
     const { data, error } = await client
-      .from('customer')
+      .from('customers')
       .insert({ 
-          name, 
-          email, 
-          contact_info: email, 
-          customer_id: uuidv4() 
+          user_id: userData.id
       })
       .select()
       .single();
@@ -194,25 +225,45 @@ export function useRules() {
            id: r.id,
            name: r.name,
            responseMins: r.response_mins,
-           resolutionMins: r.resolution_mins
+           resolutionMins: r.resolution_mins,
+           conditionField: r.condition_field,
+           conditionValue: r.condition_value
         })));
       }
     };
     load();
   }, []);
 
-  const addRule = async (name: string, responseMins: number, resolutionMins: number) => {
+  /* eslint-disable @typescript-eslint/naming-convention */
+  const addRule = async (name: string, responseMins: number, resolutionMins: number, conditionField?: string, conditionValue?: string) => {
     const client = supabase;
     if (!client) return;
+    
+    const insertData: any = { 
+        name, 
+        response_mins: responseMins, 
+        resolution_mins: resolutionMins 
+    };
+    if (conditionField) insertData.condition_field = conditionField;
+    if (conditionValue) insertData.condition_value = conditionValue;
+
     const { data } = await client
       .from('sla_rules')
-      .insert({ name, response_mins: responseMins, resolution_mins: resolutionMins })
+      .insert(insertData)
       .select().single();
       
     if (data) {
-       setRules(prev => [...prev, { id: data.id, name: data.name, responseMins: data.response_mins, resolutionMins: data.resolution_mins }]);
+       setRules(prev => [...prev, { 
+           id: data.id, 
+           name: data.name, 
+           responseMins: data.response_mins, 
+           resolutionMins: data.resolution_mins,
+           conditionField: data.condition_field,
+           conditionValue: data.condition_value 
+        }]);
     }
   };
+  /* eslint-enable @typescript-eslint/naming-convention */
 
   return { rules, addRule };
 }
@@ -268,39 +319,44 @@ export function useDashboardStats() {
     
     // Open Tickets
     const { count: openCount } = await client
-      .from('supportCase')
+      .from('support_cases')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'Open');
+      .eq('status', 'open'); // lowercase
       
-    // SLA Breaches
+    // SLA Breaches (Assume tracking not fully set up in support_cases or calculate?)
+    // support_cases has 'sla_deadline'. Check if < now and status != closed
+    const now = new Date().toISOString();
     const { count: breachCount } = await client
-      .from('supportCase')
+      .from('support_cases')
       .select('*', { count: 'exact', head: true })
-      .eq('sla_breached', true);
+      .lt('sla_deadline', now)
+      .neq('status', 'resolved')
+      .neq('status', 'closed');
 
     // Urgent Tickets
     const { data: urgent } = await client
-      .from('supportCase')
+      .from('support_cases')
       .select('*')
-      .or('priority.eq.High,sla_breached.eq.true')
-      .eq('status', 'Open')
+      .eq('priority', 'urgent')
+      .eq('status', 'open')
       .limit(5);
 
     // Avg Response Time (Logic: Avg time of closed tickets resolution)
     // Fetch last 50 resolved tickets
     const { data: resolved } = await client
-        .from('supportCase')
-        .select('created_at, resolution_date') // Assuming resolution_date was in original schema
-        .not('resolution_date', 'is', null)
+        .from('support_cases')
+        .select('created_at, updated_at') // approximated resolution? No resolution_date col in new schema?
+        // Wait, schema has 'resolution_time' (integer).
+        .not('resolution_time', 'is', null)
         .limit(50);
     
     let avgTimeStr = "N/A";
     if (resolved && resolved.length > 0) {
         let totalMs = 0;
         resolved.forEach((r: any) => {
-            const start = new Date(r.created_at).getTime();
-            const end = new Date(r.resolution_date).getTime();
-            if (end > start) totalMs += (end - start);
+             if (r.resolution_time) {
+                 totalMs += r.resolution_time * 60000; // assume minutes
+             }
         });
         const avgMs = totalMs / resolved.length;
         const mins = Math.floor(avgMs / 60000);
@@ -321,7 +377,7 @@ export function useDashboardStats() {
     // Ticket Volume (Last 24h)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: recentTickets } = await client
-        .from('supportCase')
+        .from('support_cases')
         .select('created_at')
         .gte('created_at', oneDayAgo);
     
@@ -345,7 +401,7 @@ export function useDashboardStats() {
     // Map urgent tickets
     const urgentMapped = (urgent || []).map((t: any) => ({
       id: t.id,
-      title: t.title || t.case_description || 'Untitled',
+      title: t.title,
       priority: t.priority,
       status: t.status,
       customerId: t.customer_id,
@@ -359,7 +415,6 @@ export function useDashboardStats() {
       slaBreaches: breachCount || 0,
       urgentTickets: urgentMapped,
       avgResponse: avgTimeStr,
-      onlineAgents: onlineStr,
       onlineAgents: onlineStr,
       ticketVolume: volume,
       loading: false

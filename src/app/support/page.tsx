@@ -43,6 +43,8 @@ export default function SupportPage() {
   const [ticketChatSession, setTicketChatSession] = useState<Message[] | null>(null);
   // Agent takeover flag - when true, bot stops auto-responding
   const [agentTakeover, setAgentTakeover] = useState(false);
+  // Track session found during status check
+  const [foundSessionId, setFoundSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     bottomRefInline.current?.scrollIntoView({ behavior: 'smooth' });
@@ -160,38 +162,61 @@ export default function SupportPage() {
           return;
       }
       try {
-          // 1. Customer
+          // 1. Identify or Create User & Customer
           let customerId = "";
-          const { data: existing } = await supabase.from('customer').select('id').eq('email', email).single();
-          if (existing) {
-              customerId = existing.id; 
+          let userId = "";
+
+          // Check _users first
+          const { data: existingUser } = await supabase.from('_users').select('id').eq('email', email).single();
+          
+          if (existingUser) {
+              userId = existingUser.id;
           } else {
-              const { data: newC, error: cErr } = await supabase.from('customer').insert({
-                  name: "Guest Customer",
+              // Create new user
+              const { data: newUser, error: uErr } = await supabase.from('_users').insert({
                   email: email,
-                  contact_info: email,
-                  customer_id: uuidv4(),
-                  preferences: {} 
+                  role: 'CUSTOMER',
+                  password: 'password', // Default
+                  first_name: 'Guest',
+                  last_name: 'User'
               }).select().single();
-              if (cErr || !newC) {
-                  console.error("Customer creation failed:", JSON.stringify(cErr, null, 2));
-                  throw new Error(`Failed to create customer record: ${cErr?.message || 'Unknown error'}`);
+              
+              if (uErr || !newUser) {
+                 console.error("User creation failed:", uErr);
+                 throw new Error("Failed to create user account.");
               }
-              customerId = newC.id;
+              userId = newUser.id;
           }
 
-          // 2. Ticket
-          const { data: ticket, error: tErr } = await supabase.from('supportCase').insert({
+          // Check customers profile
+          const { data: existingProfile } = await supabase.from('customers').select('id').eq('user_id', userId).single();
+          
+          if (existingProfile) {
+              customerId = existingProfile.id;
+          } else {
+              // Create profile
+              const { data: newProfile, error: pErr } = await supabase.from('customers').insert({
+                  user_id: userId,
+                  city: 'Unknown',
+                  country: 'Unknown'
+              }).select().single();
+              
+              if (pErr || !newProfile) {
+                  console.error("Profile creation failed:", pErr);
+                  throw new Error("Failed to create customer profile.");
+              }
+              customerId = newProfile.id;
+          }
+
+          // 2. Ticket (support_cases)
+          const { data: ticket, error: tErr } = await supabase.from('support_cases').insert({
               title: desc,
-              case_description: desc,
+              description: desc,
               customer_id: customerId,
-              priority: 'Low',
-              status: 'Open',
-              channel: 'Chat',
-              assigned_team: 'General',
-              created_at: new Date().toISOString(),
-              resolution_date: new Date().toISOString(),
-              satisfaction_rating: 0
+              priority: 'medium', // Matches valid constraint values (likely low, medium, high, urgent)
+              status: 'open',
+              case_number: `CASE-${Date.now()}` .slice(0, 20), // Ensure fit
+              created_at: new Date().toISOString()
           }).select().single();
 
           if (tErr || !ticket) {
@@ -199,11 +224,11 @@ export default function SupportPage() {
               throw new Error(`Failed to create ticket record: ${tErr?.message || 'Unknown error'}`);
           }
 
-          // 3. Update existing chat session with ticket reference (messages are already saved)
+          // 3. Update existing chat session with ticket reference
           if (existingSessionId) {
               await supabase.from('chat_sessions').update({
-                  customer_id: customerId,
-                  status: 'Open', // Keep open for potential agent takeover
+                  customer_id: customerId, // Using the profile ID as customer_id in chat seems correct if chat links to customer profile
+                  status: 'Active', 
                   metadata: { ticketId: ticket.id }
               }).eq('id', existingSessionId);
           }
@@ -251,7 +276,7 @@ export default function SupportPage() {
 
       try {
         const { data: ticket, error } = await supabase
-            .from('supportCase')
+            .from('support_cases')
             .select('*')
             .eq('id', ticketIdQuery.trim())
             .single();
@@ -270,6 +295,7 @@ export default function SupportPage() {
         
         if (sessions && sessions.length > 0) {
              const sessId = sessions[0].id;
+             setFoundSessionId(sessId); // Store for resumption
              const { data: msgs } = await supabase
                 .from('chat_messages')
                 .select('*')
@@ -279,7 +305,7 @@ export default function SupportPage() {
              if (msgs) {
                  const formatted: Message[] = msgs.map(m => ({
                      id: m.id,
-                     sender: m.sender_type === 'bot' ? 'bot' : 'user', // Basic mapping
+                     sender: m.sender_type === 'bot' ? 'bot' : 'user', 
                      text: m.content
                  }));
                  setTicketChatSession(formatted);
@@ -297,10 +323,12 @@ export default function SupportPage() {
   const loadChatHistory = () => {
       if (ticketChatSession) {
           setMessages(ticketChatSession);
-          // Also allow user to continue chatting? 
-          // For now, just view.
+          if (foundSessionId) {
+              setActiveSessionId(foundSessionId); // Resume session
+          }
           setIsChatMaximized(true);
-          setViewMode('home'); // Close status
+          setViewMode('home'); 
+          setStep(3); // Enable chat input
       }
   };
 
@@ -326,7 +354,6 @@ export default function SupportPage() {
                                     <button 
                                         onClick={() => {
                                             navigator.clipboard.writeText(m.ticketId!);
-                                            // Visual feedback could be added here
                                         }}
                                         className="inline-flex items-center gap-1.5 bg-[var(--sb-green)] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm hover:brightness-110 transition cursor-pointer"
                                         title="Click to copy"
@@ -381,6 +408,7 @@ export default function SupportPage() {
                         setStep(0);
                         setMessages([{ id: uuidv4(), sender: 'bot', text: 'Welcome back! How can I help you create another ticket?' }]);
                         setFormData({ description: "", email: "" });
+                        setActiveSessionId(null); // Clear session on reset
                    }}
                    className="mt-3 w-full text-center text-xs font-bold text-[var(--sb-green)] uppercase tracking-wide hover:underline"
                 >
@@ -394,7 +422,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
       
-      {/* --- HEADER --- */}
+      {/* ... (Header Omitted for brevity, matching existing) ... */}
       <header className="bg-white border-b fixed top-0 left-0 right-0 z-40 shadow-sm w-full">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -419,7 +447,7 @@ export default function SupportPage() {
         </div>
       </header>
 
-      {/* --- MAIN HERO (Text Left, Chat Right) --- */}
+      {/* ... (Main Omitted) ... */}
       <main className="flex-1 bg-[var(--sb-dark)] text-white relative pt-20">
          <div className="absolute inset-0 opacity-10 pointer-events-none">
              <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[var(--sb-green)] rounded-full blur-[120px] opacity-20 translate-x-1/2 -translate-y-1/2"></div>
@@ -427,7 +455,7 @@ export default function SupportPage() {
 
          <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
             
-            {/* LEFT: Text & Buttons */}
+            {/* LEFT */}
             <div className="flex-1 space-y-8 md:pr-10">
                  <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-none">
                     Uniquely<br/>
@@ -448,7 +476,6 @@ export default function SupportPage() {
                             <p className="text-xs text-gray-400">Find answers quickly</p>
                         </div>
                     </button>
-                    {/* Add more buttons if needed */}
                  </div>
                  
                  <div className="flex items-center gap-2 text-sm text-gray-400 font-medium pt-4">
@@ -457,9 +484,8 @@ export default function SupportPage() {
                  </div>
             </div>
 
-            {/* RIGHT: Chat Interface (Inline) */}
+            {/* RIGHT */}
             <div className="w-full md:w-[450px] bg-white text-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[600px] border border-white/10 relative transition-transform">
-                 {/* Chat Header */}
                  <div className="bg-gray-50 p-4 border-b flex items-center justify-between cursor-pointer" onClick={() => setIsChatMaximized(true)} title="Maximize Chat">
                      <div className="flex items-center gap-3">
                          <div className="w-8 h-8 rounded-full bg-[var(--sb-green)] flex items-center justify-center text-white">
@@ -475,15 +501,14 @@ export default function SupportPage() {
                      </button>
                  </div>
                  
-                 {/* Render Shared Content */}
                  {renderChatContent(false)}
             </div>
          </div>
       </main>
 
-      {/* --- FOOTER --- */}
+      {/* ... (Footer Omitted) ... */}
       <footer className="bg-gray-50 border-t py-12">
-           <div className="max-w-7xl mx-auto px-6 flex flex-col items-center justify-center text-center space-y-6">
+            <div className="max-w-7xl mx-auto px-6 flex flex-col items-center justify-center text-center space-y-6">
                 <div className="opacity-50 filter grayscale hover:grayscale-0 transition duration-500">
                     <Image src="/starbucks_logo.svg" alt="Starbucks" width={40} height={40} />
                 </div>
@@ -497,9 +522,7 @@ export default function SupportPage() {
            </div>
       </footer>
 
-      {/* --- MODALS --- */}
-
-      {/* CHAT MAXIMIZED MODAL */}
+      {/* MAXIMIZED MODAL */}
       {isChatMaximized && (
         <div 
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
@@ -509,7 +532,6 @@ export default function SupportPage() {
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
-                 {/* Header */}
                  <div className="bg-[var(--sb-green)] p-4 flex items-center justify-between text-white">
                      <div className="flex items-center gap-3">
                          <div className="bg-white/20 p-2 rounded-full"><Bot size={24} /></div>
@@ -522,8 +544,6 @@ export default function SupportPage() {
                          <Minimize2 size={24} />
                      </button>
                  </div>
-
-                 {/* Body */}
                  {renderChatContent(true)}
             </div>
         </div>
@@ -548,13 +568,6 @@ export default function SupportPage() {
                 <div className="overflow-y-auto space-y-4 pr-2">
                     <FaqItem q="How do I check my rewards balance?" a="You can check your balance in the Starbucks App or by logging into your account on our website." />
                     <FaqItem q="Can I change my order after placing it?" a="Orders cannot be modified once placed. Please contact the store directly." />
-                    <FaqItem q=" What are your support hours?" a="Our support team is available 24/7 via chat and email." />
-                    <FaqItem q="How do I recover my password?" a="Click 'Forgot Password' on the login page to receive a reset link." />
-                </div>
-                <div className="mt-6 pt-6 border-t flex justify-center">
-                    <button onClick={() => { setViewMode('home'); setIsChatMaximized(true); }} className="text-[var(--sb-green)] font-bold flex items-center gap-2 hover:underline">
-                        Still need help? Maximize Chat <ArrowRight size={16} />
-                    </button>
                 </div>
              </div>
           </div>
@@ -599,16 +612,16 @@ export default function SupportPage() {
                     <div className="space-y-6">
                         <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                              <div className="flex justify-between items-start mb-2">
-                                 <span className="text-xs font-bold text-gray-500 uppercase">Ticket ID: {ticketResult.id.slice(0,8)}...</span>
+                                 {/* FULL ID DISPLAYED */}
+                                 <span className="text-xs font-bold text-gray-500 uppercase">Ticket ID: {ticketResult.id}</span>
                                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${ticketResult.status === 'Open' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                                      {ticketResult.status}
                                  </span>
                              </div>
                              <h3 className="font-bold text-lg text-gray-900 mb-1">{ticketResult.title}</h3>
-                             <p className="text-sm text-gray-600">{ticketResult.case_description}</p>
+                             <p className="text-sm text-gray-600">{ticketResult.description}</p>
                         </div>
                         
-                        {/* Mock Timeline - In real app, fetch audit logs */}
                         <div className="space-y-3">
                             <h4 className="font-bold text-sm text-gray-900">Latest Updates</h4>
                             <div className="flex gap-3">
@@ -616,13 +629,6 @@ export default function SupportPage() {
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">Ticket Created</p>
                                     <p className="text-xs text-gray-500">{new Date(ticketResult.created_at).toLocaleString()}</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 opacity-50">
-                                <div className="mt-1"><Clock size={16} className="text-gray-400" /></div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900">Agent Assigned</p>
-                                    <p className="text-xs text-gray-500">Pending...</p>
                                 </div>
                             </div>
                         </div>
@@ -634,6 +640,11 @@ export default function SupportPage() {
                             >
                                 <MessageSquare size={18} /> View Conversation
                             </button>
+                        )}
+                        {!ticketChatSession && (
+                            <div className="p-3 bg-yellow-50 text-yellow-800 text-xs rounded-lg">
+                                Chat history unavailable (session not found).
+                            </div>
                         )}
 
                         <button onClick={() => setTicketResult(null)} className="w-full border border-gray-200 text-gray-600 font-bold py-2 rounded-lg hover:bg-gray-50">

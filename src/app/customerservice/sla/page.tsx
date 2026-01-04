@@ -12,11 +12,7 @@ export default function SlaPage() {
 
   const handleAddRule = () => {
     if (!newRule.name.trim()) return;
-    // For now we assume condition is always "priority"
-    // In a real app we'd save condition_field="priority", condition_value=newRule.conditionValue
-    // But addRule signature in data.ts might need update to support conditions or we just use name/times for now.
-    // The current addRule only takes name, response, resolution.
-    addRule(newRule.name, newRule.responseMins, newRule.resolutionMins);
+    addRule(newRule.name, newRule.responseMins, newRule.resolutionMins, "priority", newRule.conditionValue);
     setNewRule({ name: "", responseMins: 60, resolutionMins: 480, conditionValue: "Medium" });
   };
 
@@ -31,9 +27,18 @@ export default function SlaPage() {
     
     const ruleStats = rules.map(rule => {
        const matchingTickets = tickets.filter(t => {
-           // Loose matching logic for demo purposes if explicit link missing
-           // If rule name is "High Priority SLA", it matches "High" priority tickets
-           return rule.name.toLowerCase().includes(t.priority.toLowerCase());
+           // Explicit Condition Logic
+           if (rule.conditionField === 'priority' && rule.conditionValue) {
+               return t.priority.toLowerCase() === rule.conditionValue.toLowerCase();
+           }
+           
+           // Fallback: If no condition, maybe match everything? Or nothing? 
+           // For safety in this demo, if no condition is set, we use the name heuristic as fallback
+           if (!rule.conditionField) {
+             return rule.name.toLowerCase().includes(t.priority.toLowerCase());
+           }
+           
+           return false;
        });
        
        const total = matchingTickets.length;
@@ -41,17 +46,17 @@ export default function SlaPage() {
        
        matchingTickets.forEach(t => {
            const created = new Date(t.createdAt).getTime();
-           const resolutionTime = rule.resolutionMins * 60000;
+           const resolutionTime = rule.resolutionMins * 60000; // Resolution SLA
+           // Note: In real world we'd check Response SLA too (e.g. first reply time)
+           // For this simplified demo, we check resolution breach against current time if open
+           
            const deadline = created + resolutionTime;
            
            // Check resolution breach
            if (t.status === 'Resolved' || t.status === 'Closed') {
-               // If we had a resolution date, we'd check it.
-               // For now assume if it's closed, we check created vs now? No, that's wrong.
-               // We need resolution date. supportCase has resolution_date.
-               // Types.ts Ticket doesn't have resolutionDate yet? 
-               // Let's check typical Ticket type. It has createdAt. 
-               // If useTickets maps it, we can use it.
+               // Ideal: check actual resolution time from DB. 
+               // tickets data doesn't currently carry resolutionTime but DB does.
+               // For now, satisfied.
            } else {
                // Still open
                if (now > deadline) breached++;
@@ -83,9 +88,9 @@ export default function SlaPage() {
            <div>
              <h3 className="font-bold mb-1">How SLAs work</h3>
              <ul className="list-disc list-inside space-y-1 opacity-80">
-               <li>**Response Time**: The target time to send the first reply to a customer.</li>
-               <li>**Resolution Time**: The target time to completely resolve and close the ticket.</li>
-               <li>**Breaches**: Tickets that exceed these targets are flagged as "Breached" and may be escalated.</li>
+               <li>**Response Time**: The maximum time allowed for an agent to send the first reply to a customer.</li>
+               <li>**Resolution Time**: The maximum time allowed to completely solve the issue and close the ticket.</li>
+               <li>**Breaches**: Tickets that exceed these time limits are flagged as "Breached" stats, indicating a service failure.</li>
              </ul>
            </div>
         </div>
@@ -112,7 +117,8 @@ export default function SlaPage() {
                                </div>
                             </div>
                             <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
-                               Targeting {rule.responseMins}m response time for matched tickets.
+                               Targeting tickets with **{rule.conditionValue || 'Any'}** priority.
+                               (Response: {rule.responseMins}m, Resolution: {rule.resolutionMins}m)
                             </p>
                           </div>
                           
@@ -168,6 +174,20 @@ export default function SlaPage() {
                       value={newRule.name}
                       onChange={e => setNewRule({ ...newRule, name: e.target.value })}
                     />
+                  </div>
+
+                  <div>
+                     <label className="text-sm font-semibold text-gray-600 mb-1 block">Condition (Priority)</label>
+                     <select 
+                        className="sb-input w-full"
+                        value={newRule.conditionValue}
+                        onChange={e => setNewRule({ ...newRule, conditionValue: e.target.value })}
+                     >
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                     </select>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">

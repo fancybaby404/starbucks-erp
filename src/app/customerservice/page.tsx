@@ -9,25 +9,41 @@ import { auth } from "@/lib/auth";
 
 // Mock Chart Component
 function VolumeChart({ data }: { data: number[] }) {
-  const max = Math.max(...data, 5); // Ensure at least some height if max is low
+  const max = Math.max(...data, 5); 
 
-  
   return (
     <div className="w-full h-48 flex items-end justify-between gap-2 px-4">
-      {data.map((h, i) => (
-        <div key={i} className="group relative flex-1 flex flex-col justify-end items-center gap-2 h-full">
-           <div 
-             className="w-full bg-[var(--sb-green)]/20 group-hover:bg-[var(--sb-green)] rounded-t-sm transition-all duration-300 relative"
-             style={{ height: `${max > 0 ? (h / max) * 100 : 0}%` }}
+      {data.map((h, i) => {
+        // Data is passed as [oldest ... newest] based on parent usage?
+        // Parent logic: volume[23 - hourDiff]++; 
+        // 23-hourDiff means: hourDiff 0 (now) -> index 23. hourDiff 23 (24h ago) -> index 0.
+        // So index 0 is oldest (24h ago), index 23 is newest (Now).
+        
+        let label = "";
+        if (i === 23) label = "Now";
+        else if (i === 17) label = "-6h";
+        else if (i === 11) label = "-12h";
+        else if (i === 5) label = "-18h";
+        else if (i === 0) label = "-24h";
 
-           >
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--sb-dark)] text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                {h} Tix
-              </div>
-           </div>
-           <span className="text-[10px] text-gray-400">{i * 2}h</span>
-        </div>
-      ))}
+        return (
+          <div key={i} className="group relative flex-1 flex flex-col justify-end items-center gap-2 h-full">
+             <div 
+               className="w-full bg-[var(--sb-green)]/20 group-hover:bg-[var(--sb-green)] rounded-t-sm transition-all duration-300 relative"
+               style={{ height: `${max > 0 ? (h / max) * 100 : 0}%` }}
+
+             >
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--sb-dark)] text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                  {h} Tickets <br/>
+                  <span className="opacity-70">{23 - i}h ago</span>
+                </div>
+             </div>
+             <div className="h-4 flex items-center justify-center">
+                 <span className="text-[10px] text-gray-400 font-medium">{label}</span>
+             </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -68,9 +84,26 @@ export default function CustomerServiceDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="sb-section">
-        <h1 className="text-3xl font-bold text-[var(--sb-dark)]">Agent Dashboard</h1>
-        <span className="text-sm text-[var(--sb-dark)] opacity-70">Live Monitor</span>
+      <div className="sb-section flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--sb-dark)]">Agent Dashboard</h1>
+          <span className="text-sm text-[var(--sb-dark)] opacity-70">Live Monitor</span>
+        </div>
+        
+        <div className="group relative">
+           <button className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+              <span className="sr-only">Help</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+           </button>
+           <div className="absolute right-0 top-10 w-72 bg-white shadow-xl border border-gray-100 rounded-lg p-4 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
+              <h3 className="font-bold text-[var(--sb-dark)] mb-2">Dashboard Guide</h3>
+              <ul className="text-xs text-gray-500 space-y-2">
+                 <li>• <strong>SLA Breaches</strong>: Tickets that missed their deadline. Focus on these first!</li>
+                 <li>• <strong>Urgent Attention</strong>: High priority tickets that need immediate action.</li>
+                 <li>• <strong>Volume</strong>: Shows traffic flow to help anticipate busy hours.</li>
+              </ul>
+           </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -124,12 +157,11 @@ export default function CustomerServiceDashboard() {
           <div className="mb-6 flex justify-between items-center">
              <div>
                 <h3 className="text-lg font-bold text-[var(--sb-dark)]">Ticket Volume</h3>
-                <p className="text-sm text-gray-500">Incoming requests over last 24h</p>
+                <p className="text-sm text-gray-500">Incoming requests (Last 24 Hours)</p>
              </div>
-             <select className="sb-input w-auto text-xs py-1">
+             {/* <select className="sb-input w-auto text-xs py-1">
                <option>Last 24 Hours</option>
-               <option>Last 7 Days</option>
-             </select>
+             </select> */}
           </div>
           <VolumeChart data={ticketVolume} />
 

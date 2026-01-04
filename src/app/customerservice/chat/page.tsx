@@ -44,7 +44,7 @@ export default function ChatPage() {
              {queued.length === 0 && <p className="text-sm text-red-400">No waiting customers.</p>}
              {queued.map(s => (
                <div key={s.id} className="bg-white p-2 rounded shadow-sm border border-red-100 cursor-pointer hover:shadow-md" onClick={() => setActiveSessionId(s.id)}>
-                 <div className="font-medium text-sm">Customer {s.customer_id.slice(0,4)}</div>
+                 <div className="font-medium text-sm">Customer {s.customer_id ? s.customer_id.slice(0,4) : 'Guest'}</div>
                  <div className="text-xs text-red-500 font-mono">Waiting 2m</div>
                </div>
              ))}
@@ -69,7 +69,7 @@ export default function ChatPage() {
                      <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
                            <div className={`w-2.5 h-2.5 rounded-full ${s.status === 'Active' ? 'bg-green-400' : 'bg-gray-300'}`} />
-                           <div className="font-medium text-sm">Customer {s.customer_id.slice(0,4)}</div>
+                           <div className="font-medium text-sm">Customer {s.customer_id ? s.customer_id.slice(0,4) : 'Guest'}</div>
                            {isUnreplied && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Unreplied"></div>}
                         </div>
                         {isAssignedToMe && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 rounded font-bold uppercase">Me</span>}
@@ -98,10 +98,10 @@ export default function ChatPage() {
             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
               <div className="flex items-center gap-3">
                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-bold text-gray-600">
-                   {activeSession.customer_id.slice(0,2).toUpperCase()}
+                   {(activeSession.customer_id ? activeSession.customer_id.slice(0,2) : 'GU').toUpperCase()}
                  </div>
                  <div>
-                   <h2 className="font-bold text-[var(--sb-dark)]">Customer {activeSession.customer_id.slice(0,4)}</h2>
+                   <h2 className="font-bold text-[var(--sb-dark)]">Customer {activeSession.customer_id ? activeSession.customer_id.slice(0,4) : 'Guest'}</h2>
                    <div className="text-xs text-green-600 flex items-center gap-1">
                      <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
                    </div>

@@ -97,9 +97,7 @@ export default function LoginPage() {
            </form>
 
            <div className="mt-6 text-center text-xs text-gray-400">
-             <p>Demo Credentials:</p>
-             <p>Employee: admin@starbucks.com / admin123</p>
-             <p>Customer: customer@gmail.com / 123456</p>
+             <p>Employee: admin@starbucks.com / password</p>
            </div>
         </div>
       </div>
