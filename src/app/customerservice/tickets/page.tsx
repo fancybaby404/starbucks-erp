@@ -53,7 +53,7 @@ export default function TicketsPage() {
   const columns: { id: TicketStatus; label: string; color: string }[] = [
       { id: 'Open', label: 'Open', color: 'bg-blue-500' },
       { id: 'In Progress', label: 'In Progress', color: 'bg-amber-500' },
-      { id: 'Resolved', label: 'Resolved', color: 'bg-green-500' },
+      { id: 'Closed', label: 'Closed', color: 'bg-gray-500' },
   ];
 
   const grouped = columns.map(col => ({

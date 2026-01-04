@@ -14,7 +14,7 @@ interface TicketDetailModalProps {
   onDelete: (id: string) => void;
 }
 
-const STATUS_OPTIONS: TicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
+const STATUS_OPTIONS: TicketStatus[] = ["Open", "In Progress", "Closed"];
 
 export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, customerEmail, agents, onClose, onUpdate, onAddNote, onDelete }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'chat'>('details');

@@ -37,6 +37,14 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4 py-6 space-y-1">
         {NAV_ITEMS.map((item) => {
+          // Admin-only check for "Team" tab
+          const user = auth.getSession();
+          const isAdmin = user?.email === 'admin@starbucks.com';
+          
+          if (item.label === 'Team' && !isAdmin) {
+             return null;
+          }
+
           const isActive = pathname === item.href;
           return (
             <Link

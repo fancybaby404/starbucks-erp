@@ -30,23 +30,20 @@ export function useTickets() {
     }
 
     // Map DB to App types
+    // Map DB to App types
     const DB_STATUS_MAP: Record<string, TicketStatus> = {
         'open': 'Open',
         'in_progress': 'In Progress',
-        'resolved': 'Resolved',
-        'closed': 'Closed'
+        'resolved': 'Closed', // Merged Resolved into Closed
+        'closed': 'Closed',
+        'waiting': 'Open', 
+        'ended': 'Closed'
     };
     const DB_PRIORITY_MAP: Record<string, any> = {
         'low': 'Low',
         'medium': 'Medium',
         'high': 'High',
-        'urgent': 'High' // Map urgent to High or keep separate? DB has 'urgent' in stats? Let's check. 
-                         // The constraint showed 'low', 'medium'. Maybe 'high'? 
-                         // Check implies: text = ANY(ARRAY['low', 'medium', 'high', 'urgent']) usually.
-                         // But I saw 'low', 'medium' in the screenshot.
-                         // I will map 'urgent' to 'High' just in case, or 'Urgent' if app supports it. 
-                         // App type TicketPriority = "Low" | "Medium" | "High".
-                         // So map 'urgent' -> 'High'.
+        'urgent': 'High' 
     };
 
     const mapped: Ticket[] = (cases || []).map((c: any) => ({
@@ -54,8 +51,8 @@ export function useTickets() {
       title: c.title,
       customerId: c.customer_id,
       assignee: c.assigned_to,
-      status: DB_STATUS_MAP[c.status] || 'Open',
-      priority: DB_PRIORITY_MAP[c.priority] || 'Medium',
+      status: DB_STATUS_MAP[(c.status || 'open').toLowerCase()] || 'Open',
+      priority: DB_PRIORITY_MAP[(c.priority || 'medium').toLowerCase()] || 'Medium',
       createdAt: c.created_at,
       notes: []
     }));
@@ -66,6 +63,20 @@ export function useTickets() {
 
   useEffect(() => {
     fetchTickets();
+
+    const client = supabase;
+    if (!client) return;
+
+    const sub = client
+      .channel('public:support_cases')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_cases' }, () => {
+          fetchTickets();
+      })
+      .subscribe();
+
+    return () => {
+      client.removeChannel(sub);
+    };
   }, [fetchTickets]);
   
   const addTicket = async (ticket: Omit<Ticket, "id" | "createdAt" | "notes" | "status">) => {
@@ -120,7 +131,7 @@ export function useTickets() {
         'Open': 'open',
         'In Progress': 'in_progress',
         'Resolved': 'resolved',
-        'Closed': 'closed'
+        'Closed': 'resolved'
     };
 
     const updates: Partial<DbSupportCase> = {};
@@ -602,48 +613,128 @@ export function useChat() {
     };
     fetch();
     const sub = client.channel(`public:chat_messages:${activeSessionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${activeSessionId}` }, (payload) => {
-         const newMsg = payload.new as ChatMessage;
-         setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-         });
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${activeSessionId}` }, (payload) => {
+          const newMsg = payload.new as ChatMessage;
+          setMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+          });
       })
       .subscribe();
+      
     return () => { sub.unsubscribe(); };
   }, [activeSessionId]);
 
-  const sendMessage = async (content: string, sender: 'agent' | 'system' = 'agent') => {
-    const client = supabase;
-    if (!client || !activeSessionId) return;
-    
-    // Optimistic update
-    const tempId = uuidv4();
-    const newMessage: ChatMessage = {
-        id: tempId,
-        session_id: activeSessionId,
-        sender_type: sender,
-        content,
-        created_at: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
+  const sendMessage = async (content: string, senderType: 'customer' | 'agent' | 'system') => {
+      const client = supabase;
+      if (!client || !activeSessionId) return;
 
-    await client.from('chat_messages').insert({
-      id: tempId,
-      session_id: activeSessionId,
-      sender_type: sender,
-      content,
-      created_at: newMessage.created_at
-    });
+      // Optimistic Update
+      const tempId = crypto.randomUUID();
+      const newMessage: ChatMessage = {
+          id: tempId,
+          session_id: activeSessionId,
+          sender_type: senderType,
+          content,
+          created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, newMessage]);
 
-    // Update Session Last Message
-    await client.from('chat_sessions').update({
-        last_message: content,
-        last_message_at: newMessage.created_at,
-        last_message_sender: sender
-    }).eq('id', activeSessionId);
+      const { error } = await client.from('chat_messages').insert({
+          id: tempId,
+          session_id: activeSessionId,
+          sender_type: senderType,
+          content
+      });
+
+      if (error) console.error("Error sending message:", error);
+
+      // Update session last message
+      await client.from('chat_sessions').update({
+          last_message: content,
+          last_message_at: new Date().toISOString(),
+          last_message_sender: senderType,
+          status: senderType === 'agent' ? 'Active' : 'Waiting' // Auto-update status based on reply
+      }).eq('id', activeSessionId);
+
+      // AUTOMATION: If agent replies, set Ticket to 'In Progress'
+      if (senderType === 'agent') {
+          // 1. Get Session Metadata to find Ticket ID
+          const { data: sessionData } = await client.from('chat_sessions').select('metadata, customer_id').eq('id', activeSessionId).single();
+          
+          let ticketId = sessionData?.metadata?.ticketId;
+          
+          // 2. If no direct link, try to find latest open ticket for customer
+          if (!ticketId && sessionData?.customer_id) {
+               const { data: tickets } = await client.from('support_cases')
+                 .select('id')
+                 .eq('customer_id', sessionData.customer_id)
+                 .neq('status', 'closed')
+                 .neq('status', 'resolved')
+                 .order('created_at', { ascending: false })
+                 .limit(1);
+               if (tickets && tickets.length > 0) ticketId = tickets[0].id;
+          }
+
+          // 3. Update Ticket
+          if (ticketId) {
+               await client.from('support_cases').update({
+                   status: 'in_progress',
+                   // assignee: currentUser?.email // Optional: assign to replier?
+               }).eq('id', ticketId);
+          }
+      }
   };
 
-  return { sessions, activeSessionId, setActiveSessionId, messages, sendMessage };
+  const endSession = async () => {
+      const client = supabase;
+      if (!client || !activeSessionId) return;
+
+      // 1. Send System Message
+      await sendMessage("Agent has ended the chat.", "system");
+
+      // 2. Update Session Status
+      await client.from('chat_sessions').update({
+          status: 'Closed',
+          ended_at: new Date().toISOString()
+      }).eq('id', activeSessionId);
+
+      // 3. Resolve Linked Ticket
+      const { data: sessionData } = await client.from('chat_sessions').select('metadata, customer_id').eq('id', activeSessionId).single();
+      let ticketId = sessionData?.metadata?.ticketId;
+      
+      if (!ticketId && sessionData?.customer_id) {
+            const { data: tickets } = await client.from('support_cases')
+                .select('id')
+                .eq('customer_id', sessionData.customer_id)
+                .neq('status', 'closed')
+                .neq('status', 'resolved')
+                .order('created_at', { ascending: false })
+                .limit(1);
+            if (tickets && tickets.length > 0) ticketId = tickets[0].id;
+      }
+
+      if (ticketId) {
+            await client.from('support_cases').update({
+                status: 'resolved',
+                resolution_date: new Date().toISOString()
+            }).eq('id', ticketId);
+      }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+      const client = supabase;
+      if (!client) return;
+
+      // Optimistic update
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeSessionId === sessionId) setActiveSessionId(null);
+
+      const { error } = await client.from('chat_sessions').delete().eq('id', sessionId);
+      if (error) {
+          console.error("Error deleting session:", error);
+      }
+  };
+
+  return { sessions, activeSessionId, setActiveSessionId, messages, sendMessage, endSession, deleteSession };
 }

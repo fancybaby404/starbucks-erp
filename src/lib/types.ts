@@ -99,7 +99,7 @@ export interface DbChatSession {
   id: string;
   customer_id: string;
   agent_id: string | null;
-  status: 'Waiting' | 'Active' | 'Ended';
+  status: 'Waiting' | 'Active' | 'Ended' | 'Closed';
   started_at: string;
   ended_at: string | null;
   metadata?: any;
